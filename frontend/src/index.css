@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  /* Restrained product palette: cool off-white surface, ink text, one accent. */
+  --color-surface: oklch(98.5% 0.003 250);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-surface-sunken: oklch(96.5% 0.005 250);
+  --color-border: oklch(89% 0.006 250);
+  --color-ink: oklch(20% 0.01 260);
+  --color-ink-muted: oklch(45% 0.015 260);
+
+  /* Saffron accent: primary actions, current selection, state only (not decoration). */
+  --color-accent: oklch(64% 0.16 55);
+  --color-accent-strong: oklch(54% 0.17 55);
+  --color-accent-soft: oklch(94% 0.04 60);
+
+  --color-success: oklch(56% 0.13 145);
+  --color-success-soft: oklch(95% 0.04 145);
+  --color-warning: oklch(62% 0.15 70);
+  --color-warning-soft: oklch(95% 0.05 75);
+  --color-danger: oklch(55% 0.18 25);
+  --color-danger-soft: oklch(95% 0.04 25);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  background-image: url('/image.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  body {
+    background-image: none;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .itinerary-print, .itinerary-print * {
+    visibility: visible;
+  }
+  .itinerary-print {
+    position: absolute;
+    inset: 0;
+  }
+  .itinerary-print .itinerary-day-summary {
+    list-style: none;
+  }
+  .itinerary-print .itinerary-day-summary::-webkit-details-marker {
+    display: none;
+  }
+  .itinerary-print details {
+    break-inside: avoid;
+  }
+}
