@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { ItineraryDay } from '../../api/types';
+import type { ItineraryDay, WeatherDay } from '../../api/types';
 
 const BLOCKS: { key: 'morning' | 'afternoon' | 'evening'; label: string; meal: keyof ItineraryDay['meals'] }[] = [
   { key: 'morning', label: 'Morning', meal: 'breakfast' },
@@ -7,8 +7,17 @@ const BLOCKS: { key: 'morning' | 'afternoon' | 'evening'; label: string; meal: k
   { key: 'evening', label: 'Evening', meal: 'dinner' },
 ];
 
-export function ItineraryView({ destination, itinerary }: { destination: string; itinerary: ItineraryDay[] }) {
+export function ItineraryView({
+  destination,
+  itinerary,
+  weather = [],
+}: {
+  destination: string;
+  itinerary: ItineraryDay[];
+  weather?: WeatherDay[];
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const weatherByDay = new Map(weather.map((w, i) => [i + 1, w]));
 
   function handlePrint() {
     // <details> hides closed content via a UA mechanism CSS can't override,
@@ -39,10 +48,18 @@ export function ItineraryView({ destination, itinerary }: { destination: string;
       </div>
       <h2 className="hidden print:block print:mb-4 print:text-xl print:font-semibold">Itinerary for {destination}</h2>
       <div ref={containerRef} className="mt-2 flex flex-col gap-2">
-        {itinerary.map((day) => (
+        {itinerary.map((day) => {
+          const dayWeather = weatherByDay.get(day.day);
+          return (
           <details key={day.day} className="rounded-xl border border-border bg-surface-raised" open={day.day === 1}>
             <summary className="itinerary-day-summary cursor-pointer select-none px-4 py-3 font-medium text-ink">
               Day {day.day}
+              {dayWeather && (
+                <span className="ml-2 text-xs font-normal text-ink-muted">
+                  {dayWeather.summary}, {dayWeather.tempMinC}-{dayWeather.tempMaxC}°C
+                  {dayWeather.rainLikely ? ' ☔' : ''}
+                </span>
+              )}
             </summary>
             <div className="flex flex-col gap-3 border-t border-border px-4 py-3">
               {BLOCKS.map(({ key, label, meal }) => (
@@ -54,7 +71,8 @@ export function ItineraryView({ destination, itinerary }: { destination: string;
               ))}
             </div>
           </details>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

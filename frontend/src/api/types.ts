@@ -10,6 +10,8 @@ export interface TripInput {
   mobilityConstraints?: string;
   startingCity?: string;
   mustVisitPlaces?: string[];
+  startDate?: string;
+  language?: string;
 }
 
 export interface Hotel {
@@ -43,6 +45,14 @@ export interface ItineraryDay {
   meals: { breakfast: string; lunch: string; dinner: string };
 }
 
+export interface WeatherDay {
+  date: string;
+  summary: string;
+  tempMaxC: number;
+  tempMinC: number;
+  rainLikely: boolean;
+}
+
 export interface TripSummary {
   destination: string;
   destinationWasSuggested: boolean;
@@ -71,6 +81,7 @@ export interface FeasiblePlan {
   restaurants: Restaurant[];
   attractions: string[];
   itinerary: ItineraryDay[];
+  weather: WeatherDay[];
   optionalInclusions: OptionalInclusion[];
   budgetBreakdown: BudgetBreakdown;
   whyThisFits: string;

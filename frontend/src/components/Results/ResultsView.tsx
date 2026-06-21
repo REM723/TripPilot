@@ -12,7 +12,7 @@ export function ResultsView({ plan }: { plan: FeasiblePlan }) {
       <TripSummary summary={plan.tripSummary} />
       <HotelCards hotels={plan.hotels} />
       <RestaurantCards restaurants={plan.restaurants} />
-      <ItineraryView destination={plan.tripSummary.destination} itinerary={plan.itinerary} />
+      <ItineraryView destination={plan.tripSummary.destination} itinerary={plan.itinerary} weather={plan.weather} />
       <OptionalInclusions inclusions={plan.optionalInclusions} />
       <BudgetBreakdown breakdown={plan.budgetBreakdown} />
       <section className="rounded-xl border border-accent/30 bg-accent-soft p-4">

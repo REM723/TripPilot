@@ -15,6 +15,8 @@ class TripRequest(BaseModel):
     starting_city: Optional[str] = None
     must_visit_places: List[str] = Field(default_factory=list)
     mobility_constraints: Optional[str] = None
+    start_date: Optional[str] = Field(default=None, description="ISO date, e.g. 2026-07-01. Used for weather-aware planning.")
+    language: str = Field(default="English", description="Language for AI-generated content, e.g. Hindi, Tamil")
 
 
 class Hotel(BaseModel):
@@ -46,6 +48,14 @@ class DayMeals(BaseModel):
     dinner: str
 
 
+class WeatherDay(BaseModel):
+    date: str
+    summary: str
+    temp_max: float
+    temp_min: float
+    rain_likely: bool
+
+
 class ItineraryDay(BaseModel):
     day: int
     morning: str
@@ -70,4 +80,5 @@ class TripResponse(BaseModel):
     attractions: List[str] = Field(default_factory=list)
     optional_inclusions: List[OptionalInclusion] = Field(default_factory=list)
     itinerary: List[ItineraryDay] = Field(default_factory=list)
+    weather: List[WeatherDay] = Field(default_factory=list)
     why_this_fits: str = ""

@@ -33,6 +33,9 @@ def plan_trip(request: TripRequest) -> TripResponse:
         "starting_city": request.starting_city,
         "must_visit_places": request.must_visit_places,
         "mobility_constraints": request.mobility_constraints,
+        "start_date": request.start_date,
+        "language": request.language,
+        "weather": [],
         "input_valid": False,
         "validation_errors": [],
         "destination_was_suggested": False,
@@ -85,5 +88,6 @@ def plan_trip(request: TripRequest) -> TripResponse:
         attractions=result["attractions"],
         optional_inclusions=result["optional_inclusions"],
         itinerary=result["itinerary"],
+        weather=result["weather"],
         why_this_fits=result["why_this_fits"],
     )

@@ -1,4 +1,4 @@
-import type { Hotel, ItineraryDay, OptionalInclusion, PlanResult, Restaurant, TripInput } from './types';
+import type { Hotel, ItineraryDay, OptionalInclusion, PlanResult, Restaurant, TripInput, WeatherDay } from './types';
 import { formatInrInText } from '../lib/currency';
 
 // Swappable client: this file is the only thing that knows the backend's wire
@@ -38,6 +38,14 @@ interface BackendItineraryDay {
   meals: { breakfast: string; lunch: string; dinner: string };
 }
 
+interface BackendWeatherDay {
+  date: string;
+  summary: string;
+  temp_max: number;
+  temp_min: number;
+  rain_likely: boolean;
+}
+
 interface BackendResponse {
   status: 'ok' | 'budget_too_low' | 'budget_too_high';
   message: string | null;
@@ -60,6 +68,7 @@ interface BackendResponse {
   attractions: string[];
   optional_inclusions: BackendOptionalInclusion[];
   itinerary: BackendItineraryDay[];
+  weather: BackendWeatherDay[];
   why_this_fits: string;
 }
 
@@ -92,6 +101,10 @@ function mapItineraryDay(d: BackendItineraryDay): ItineraryDay {
   return { day: d.day, morning: d.morning, afternoon: d.afternoon, evening: d.evening, meals: d.meals };
 }
 
+function mapWeatherDay(w: BackendWeatherDay): WeatherDay {
+  return { date: w.date, summary: w.summary, tempMaxC: w.temp_max, tempMinC: w.temp_min, rainLikely: w.rain_likely };
+}
+
 function toRequestBody(input: TripInput) {
   return {
     budget: input.budgetInr,
@@ -105,6 +118,8 @@ function toRequestBody(input: TripInput) {
     starting_city: input.startingCity || undefined,
     must_visit_places: input.mustVisitPlaces ?? [],
     mobility_constraints: input.mobilityConstraints || undefined,
+    start_date: input.startDate || undefined,
+    language: input.language || 'English',
   };
 }
 
@@ -162,6 +177,7 @@ export async function requestPlan(input: TripInput): Promise<PlanResult> {
     restaurants: data.restaurants.map(mapRestaurant),
     attractions: data.attractions,
     itinerary: data.itinerary.map(mapItineraryDay),
+    weather: data.weather.map(mapWeatherDay),
     optionalInclusions: data.optional_inclusions.map(mapOptionalInclusion),
     whyThisFits: formatInrInText(data.why_this_fits),
     budgetBreakdown: {

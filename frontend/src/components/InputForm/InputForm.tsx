@@ -3,6 +3,8 @@ import type { TripInput } from '../../api/types';
 import { PREFERENCES } from '../../lib/preferences';
 import { FormField } from './FormField';
 
+const LANGUAGES = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi'];
+
 interface InputFormProps {
   initialValue?: TripInput;
   onSubmit: (input: TripInput) => void;
@@ -20,6 +22,8 @@ interface FormValues {
   mobilityConstraints: string;
   startingCity: string;
   mustVisitPlaces: string;
+  startDate: string;
+  language: string;
 }
 
 function toFormValues(input?: TripInput): FormValues {
@@ -35,6 +39,8 @@ function toFormValues(input?: TripInput): FormValues {
     mobilityConstraints: input?.mobilityConstraints ?? '',
     startingCity: input?.startingCity ?? '',
     mustVisitPlaces: input?.mustVisitPlaces?.join(', ') ?? '',
+    startDate: input?.startDate ?? '',
+    language: input?.language ?? 'English',
   };
 }
 
@@ -105,6 +111,8 @@ export function InputForm({ initialValue, onSubmit }: InputFormProps) {
       mobilityConstraints: values.mobilityConstraints.trim() || undefined,
       startingCity: values.startingCity.trim() || undefined,
       mustVisitPlaces: mustVisitPlaces.length > 0 ? mustVisitPlaces : undefined,
+      startDate: values.startDate || undefined,
+      language: values.language,
     });
   }
 
@@ -195,6 +203,29 @@ export function InputForm({ initialValue, onSubmit }: InputFormProps) {
           More details (optional)
         </summary>
         <div className="flex flex-col gap-4 border-t border-border px-4 py-4">
+          <FormField label="Itinerary language" htmlFor="language">
+            <select
+              id="language"
+              className={inputClass}
+              value={values.language}
+              onChange={(e) => set('language', e.target.value)}
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Start date (optional, enables weather-aware planning)" htmlFor="startDate">
+            <input
+              id="startDate"
+              type="date"
+              className={inputClass}
+              value={values.startDate}
+              onChange={(e) => set('startDate', e.target.value)}
+            />
+          </FormField>
           <FormField label="Destination" htmlFor="destination">
             <input
               id="destination"

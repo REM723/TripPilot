@@ -1,11 +1,13 @@
 import json
 import re
+from datetime import date
 from typing import List, Optional, TypedDict
 
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import END, StateGraph
 
 from .llm import get_llm
+from .weather import fetch_forecast
 
 SUGGESTED_DESTINATIONS = ["Munnar", "Wayanad", "Coorg", "Goa", "Manali", "Udaipur"]
 
@@ -22,6 +24,8 @@ class PlannerState(TypedDict):
     starting_city: Optional[str]
     must_visit_places: List[str]
     mobility_constraints: Optional[str]
+    start_date: Optional[str]
+    language: str
 
     input_valid: bool
     validation_errors: List[str]
@@ -41,6 +45,7 @@ class PlannerState(TypedDict):
     why_this_fits: str
 
     itinerary: List[dict]
+    weather: List[dict]
 
 
 MIN_PER_DAY_PER_PERSON = 1200
@@ -57,6 +62,14 @@ itinerary_prompt = ChatPromptTemplate.from_messages(
         Create a realistic, budget-aware, day-by-day itinerary covering the
         full trip duration. Respect any mobility constraints and prioritize
         any must-visit places.
+
+        If a weather forecast is given for a day, plan around it: swap outdoor
+        sightseeing for indoor/covered options (museums, malls, cafes, indoor
+        markets) on days marked rain_likely, and favor outdoor activities on
+        clear days.
+
+        Write all text values (morning/afternoon/evening/meals) in {language}.
+        Keep the JSON keys themselves in English exactly as shown below.
 
         Return ONLY a JSON list with this exact structure, one entry per day:
 
@@ -115,7 +128,10 @@ itinerary_prompt = ChatPromptTemplate.from_messages(
         Restaurants already chosen for meals (reference these by name where relevant):
         {restaurant_names}
 
-        Create the day-by-day itinerary JSON now.
+        Weather Forecast (one line per day, may be empty if unavailable):
+        {weather_forecast}
+
+        Create the day-by-day itinerary JSON now, written in {language}.
         """,
         ),
     ]
@@ -131,6 +147,7 @@ hotel_prompt = ChatPromptTemplate.from_messages(
         Rules:
         - Match the hotel type (Budget / Standard / Luxury)
         - Stay within the accommodation budget
+        - Write "highlights" in {language}. Keep "name", "type" and JSON keys in English.
         - Return ONLY a JSON list with this structure:
 
         [
@@ -153,6 +170,7 @@ hotel_prompt = ChatPromptTemplate.from_messages(
         Hotel Type: {hotel_type}
         Accommodation Budget: Rs.{accommodation_budget}
         Number of Days: {days}
+        Language: {language}
         """,
         ),
     ]
@@ -170,6 +188,7 @@ restaurant_prompt = ChatPromptTemplate.from_messages(
         - Respect the stated food preferences
         - Note group/family suitability based on the traveler mix
         - Stay within a reasonable per-meal cost for the stated food budget
+        - Write "cuisine" and "group_suitability" in {language}. Keep "name" and JSON keys in English.
         - Return ONLY a JSON list with this structure:
 
         [
@@ -195,6 +214,7 @@ restaurant_prompt = ChatPromptTemplate.from_messages(
         Number of Days: {days}
         Adults: {adults}
         Children: {children}
+        Language: {language}
         """,
         ),
     ]
@@ -303,6 +323,7 @@ def select_hotels(state: PlannerState) -> PlannerState:
             "hotel_type": state["hotel_type"],
             "accommodation_budget": accommodation_budget,
             "days": state["days"],
+            "language": state.get("language") or "English",
         }
     )
 
@@ -337,6 +358,7 @@ def select_restaurants(state: PlannerState) -> PlannerState:
             "days": state["days"],
             "adults": state["adults"],
             "children": state["children"],
+            "language": state.get("language") or "English",
         }
     )
 
@@ -390,6 +412,30 @@ def add_extras(state: PlannerState) -> PlannerState:
     return {**state, "optional_inclusions": optional_inclusions, "why_this_fits": why_this_fits}
 
 
+def fetch_weather(state: PlannerState) -> PlannerState:
+    start_date = state.get("start_date")
+    if not start_date:
+        return {**state, "weather": []}
+
+    try:
+        parsed = date.fromisoformat(start_date)
+    except ValueError:
+        return {**state, "weather": []}
+
+    forecast = fetch_forecast(state["destination"], parsed, state["days"])
+    return {**state, "weather": forecast or []}
+
+
+def _format_weather(weather: List[dict]) -> str:
+    if not weather:
+        return "No forecast available."
+    return "\n".join(
+        f"{day['date']}: {day['summary']}, {day['temp_min']}-{day['temp_max']}C"
+        + (" (rain likely)" if day["rain_likely"] else "")
+        for day in weather
+    )
+
+
 def assemble_itinerary(state: PlannerState) -> PlannerState:
     llm = get_llm()
 
@@ -408,6 +454,8 @@ def assemble_itinerary(state: PlannerState) -> PlannerState:
             mobility_constraints=state.get("mobility_constraints") or "None",
             cost_breakdown=state["cost_breakdown"],
             restaurant_names=", ".join(r["name"] for r in state["restaurants"]),
+            weather_forecast=_format_weather(state.get("weather", [])),
+            language=state.get("language") or "English",
         )
     )
 
@@ -444,6 +492,7 @@ def build_workflow():
     workflow.add_node("select_restaurants", select_restaurants)
     workflow.add_node("select_attractions", select_attractions)
     workflow.add_node("add_extras", add_extras)
+    workflow.add_node("fetch_weather", fetch_weather)
     workflow.add_node("assemble_itinerary", assemble_itinerary)
     workflow.add_node("invalid_input", invalid_input)
 
@@ -473,7 +522,8 @@ def build_workflow():
     workflow.add_edge("select_hotels", "select_restaurants")
     workflow.add_edge("select_restaurants", "select_attractions")
     workflow.add_edge("select_attractions", "add_extras")
-    workflow.add_edge("add_extras", "assemble_itinerary")
+    workflow.add_edge("add_extras", "fetch_weather")
+    workflow.add_edge("fetch_weather", "assemble_itinerary")
     workflow.add_edge("assemble_itinerary", END)
     workflow.add_edge("invalid_input", END)
 
