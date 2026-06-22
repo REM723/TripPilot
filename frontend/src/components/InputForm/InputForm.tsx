@@ -175,6 +175,17 @@ export function InputForm({ initialValue, onSubmit }: InputFormProps) {
         </FormField>
       </div>
 
+      <FormField label="Destination" htmlFor="destination">
+        <input
+          id="destination"
+          type="text"
+          placeholder="Leave blank for a suggestion"
+          className={inputClass}
+          value={values.destination}
+          onChange={(e) => set('destination', e.target.value)}
+        />
+      </FormField>
+
       <FormField label="What do you want to do there?" htmlFor="preferences" error={errors.preferences}>
         <div id="preferences" className="flex flex-wrap gap-2">
           {PREFERENCES.map((pref) => {
@@ -224,16 +235,6 @@ export function InputForm({ initialValue, onSubmit }: InputFormProps) {
               className={inputClass}
               value={values.startDate}
               onChange={(e) => set('startDate', e.target.value)}
-            />
-          </FormField>
-          <FormField label="Destination" htmlFor="destination">
-            <input
-              id="destination"
-              type="text"
-              placeholder="Leave blank for a suggestion"
-              className={inputClass}
-              value={values.destination}
-              onChange={(e) => set('destination', e.target.value)}
             />
           </FormField>
           <FormField label="Starting city" htmlFor="startingCity">
