@@ -223,6 +223,75 @@ restaurant_prompt = ChatPromptTemplate.from_messages(
 )
 
 
+extras_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+        You are a travel expert. Suggest real, current prices for two optional add-ons
+        for the given destination: a guided heritage/city walking tour, and one paid
+        adventure activity (e.g. trekking, water sports) per adult.
+
+        Rules:
+        - Use realistic local pricing in INR for {destination}, not a generic flat rate.
+        - Write "description" in {language}. Keep JSON keys in English.
+        - Return ONLY a JSON list with this structure:
+
+        [
+          {{
+            "name": "Guided heritage walk",
+            "description": "One-line description",
+            "price_inr": 800
+          }},
+          {{
+            "name": "Adventure activity add-on",
+            "description": "One-line description",
+            "price_inr": 1200
+          }}
+        ]
+
+        Return nothing else. No explanation. Just the JSON list.
+        """,
+        ),
+        (
+            "human",
+            """
+        Destination: {destination}
+        Language: {language}
+        """,
+        ),
+    ]
+)
+
+
+def _select_extras(state: PlannerState) -> list:
+    llm = get_llm()
+    destination = state["destination"]
+
+    prompt = extras_prompt.invoke(
+        {"destination": destination, "language": state.get("language") or "English"}
+    )
+
+    response = llm.invoke(prompt)
+    raw = re.sub(r"```json|```", "", response.content.strip()).strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return [
+            {
+                "name": "Guided heritage walk",
+                "description": f"A local guide-led walking tour around {destination}.",
+                "price_inr": 800,
+            },
+            {
+                "name": "Adventure activity add-on",
+                "description": "One paid adventure activity (e.g. trekking, water sports) per adult.",
+                "price_inr": 1200,
+            },
+        ]
+
+
 def validate_inputs(state: PlannerState) -> PlannerState:
     errors = []
 
@@ -461,18 +530,7 @@ def select_attractions(state: PlannerState) -> PlannerState:
 
 def add_extras(state: PlannerState) -> PlannerState:
     destination = state["destination"]
-    optional_inclusions = [
-        {
-            "name": "Guided heritage walk",
-            "description": f"A local guide-led walking tour around {destination}.",
-            "price_inr": 800,
-        },
-        {
-            "name": "Adventure activity add-on",
-            "description": "One paid adventure activity (e.g. trekking, water sports) per adult.",
-            "price_inr": 1200,
-        },
-    ]
+    optional_inclusions = _select_extras(state)
 
     preferences = ", ".join(state.get("preferences", [])) or "your trip goals"
     why_this_fits = (
