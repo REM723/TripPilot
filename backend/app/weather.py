@@ -1,10 +1,14 @@
 import json
+import ssl
 import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 from typing import List, Optional, TypedDict
 
+import certifi
+
 # ponytail: stdlib urllib instead of adding requests/httpx for two GET calls.
+_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 WEATHER_CODES = {
     0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
@@ -27,7 +31,7 @@ class DayWeather(TypedDict):
 
 
 def _get_json(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=8) as resp:
+    with urllib.request.urlopen(url, timeout=8, context=_SSL_CONTEXT) as resp:
         return json.loads(resp.read())
 
 
